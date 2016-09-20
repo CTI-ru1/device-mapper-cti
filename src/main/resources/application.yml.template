@@ -1,0 +1,12 @@
+rabbitmq:
+  server: localhost
+  port: 5672
+  username: guest
+  password: guest
+  queue:
+    send: string-readings
+    receive: string-commands
+mqtt:
+  url: "tcp://localhost:1883"
+  topics: "#"
+  clientId: "clientId"
