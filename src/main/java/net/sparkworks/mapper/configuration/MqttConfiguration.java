@@ -16,6 +16,9 @@ import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.MessageHandler;
 import org.springframework.messaging.MessagingException;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Configuration
 public class MqttConfiguration {
     /**
@@ -31,7 +34,7 @@ public class MqttConfiguration {
     private String mqttClientId;
 
     @Autowired
-    SenderService senderService;
+    private SenderService senderService;
 
     @Bean
     public MessageChannel mqttInputChannel() {
@@ -66,20 +69,55 @@ public class MqttConfiguration {
         };
     }
 
-    private void parseMessage(String topic, Message<?> message) {
+    private void parseMessage(final String topic, final Message<?> message) {
         final String payload = (String) message.getPayload();
-        if (payload.contains(",") && payload.contains("+") && payload.split("\\+").length > 3) {
+        try {
+            List<ParsedReading> readings = parseStringMessage(topic, payload);
+            for (ParsedReading reading : readings) {
+                if (reading != null) {
+                    senderService.sendMeasurement(reading.getUri(), reading.getValue(), System.currentTimeMillis());
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.error(e, e);
+        }
+    }
 
-            final String mac = payload.split("/")[0];
+    private static List<ParsedReading> parseStringMessage(final String topic, final String payload) {
+        List<ParsedReading> readings = new ArrayList<>();
+        if (payload.contains(",") && payload.contains("+") && payload.split("\\+").length >= 3) {
 
-            for (final String part : payload.split("/")[1].split("\\+")) {
+            final String mac = payload.split("/", 2)[0];
+
+            final String sensorsPayload = payload.substring(payload.indexOf('/') + 1);
+            LOGGER.info("sensorsPayload:" + sensorsPayload);
+            for (final String part : sensorsPayload.split("\\+")) {
                 if (part.isEmpty() || !part.contains(",")) continue;
                 final String sensorName = part.split(",")[0];
                 final String sensorValue = part.split(",")[1];
                 final String uri = String.format("%s/%s/%s", topic, mac, sensorName);
                 LOGGER.info(String.format("%s : %s", uri, sensorValue));
-                senderService.sendMeasurement(uri, Double.parseDouble(sensorValue), System.currentTimeMillis());
+                readings.add(new ParsedReading(uri, new Double(sensorValue)));
             }
+        }
+        return readings;
+    }
+
+    private static class ParsedReading {
+        private final String uri;
+        private final Double value;
+
+        public ParsedReading(final String uri, final Double value) {
+            this.uri = uri;
+            this.value = value;
+        }
+
+        public String getUri() {
+            return uri;
+        }
+
+        public Double getValue() {
+            return value;
         }
     }
 }
