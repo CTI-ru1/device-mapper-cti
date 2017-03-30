@@ -90,6 +90,9 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
                     <finalName>device-mapper-cti</finalName>
+                    <classifier>exec</classifier>
+                    <mainClass>net.sparkworks.mapper.Application</mainClass>
+                    <executable>true</executable>
                 </configuration>
             </plugin>
         </plugins>
