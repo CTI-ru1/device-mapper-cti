@@ -43,8 +43,7 @@ public class MqttConfiguration {
 
     @Bean
     public MessageProducer inbound() {
-        MqttPahoMessageDrivenChannelAdapter adapter =
-                new MqttPahoMessageDrivenChannelAdapter(mqttUrl, mqttClientId, mqttTopics);
+        MqttPahoMessageDrivenChannelAdapter adapter = new MqttPahoMessageDrivenChannelAdapter(mqttUrl, mqttClientId, mqttTopics);
         adapter.setCompletionTimeout(5000);
         adapter.setConverter(new DefaultPahoMessageConverter());
         adapter.setQos(0);
@@ -62,7 +61,8 @@ public class MqttConfiguration {
             public void handleMessage(Message<?> message) throws MessagingException {
                 String topic = (String) message.getHeaders().get("mqtt_topic");
 
-                if (topic.startsWith("s") || topic.equals("heartbeat") || topic.equals("stats")) return;
+                if (topic.startsWith("s") || topic.equals("heartbeat") || topic.equals("stats"))
+                    return;
                 parseMessage(topic, message);
 
             }
@@ -84,6 +84,21 @@ public class MqttConfiguration {
     }
 
     private static List<ParsedReading> parseStringMessage(final String topic, final String payload) {
+        if (topic.startsWith("flare0")) {
+            return parsePlainMessage(topic, payload);
+        } else {
+            return parseComplexMessage(topic, payload);
+        }
+    }
+
+    private static List<ParsedReading> parsePlainMessage(final String uri, final String value) {
+        final List<ParsedReading> readings = new ArrayList<>();
+        LOGGER.info(String.format("%s : %s", uri, value));
+        readings.add(new ParsedReading(uri, new Double(value)));
+        return readings;
+    }
+
+    private static List<ParsedReading> parseComplexMessage(final String topic, final String payload) {
         List<ParsedReading> readings = new ArrayList<>();
         if (payload.contains(",") && payload.contains("+") && payload.split("\\+").length >= 3) {
 
@@ -92,7 +107,8 @@ public class MqttConfiguration {
             final String sensorsPayload = payload.substring(payload.indexOf('/') + 1);
             LOGGER.info("sensorsPayload:" + sensorsPayload);
             for (final String part : sensorsPayload.split("\\+")) {
-                if (part.isEmpty() || !part.contains(",")) continue;
+                if (part.isEmpty() || !part.contains(","))
+                    continue;
                 final String sensorName = part.split(",")[0];
                 final String sensorValue = part.split(",")[1];
                 final String uri = String.format("%s/%s/%s", topic, mac, sensorName);
