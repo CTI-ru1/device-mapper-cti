@@ -10,3 +10,4 @@ mqtt:
   url: "tcp://localhost:1883"
   topics: "#"
   clientId: "clientId"
+log.path: "/var/log/greenmind/cti/"
