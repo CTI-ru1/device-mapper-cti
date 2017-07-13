@@ -84,10 +84,11 @@ public class MqttConfiguration {
     }
 
     private static List<ParsedReading> parseStringMessage(final String topic, final String payload) {
+        LOGGER.info("["+topic+"] '"+payload+"'");
         if (topic.startsWith("flare")) {
             return parsePlainMessage(topic, payload);
         } else {
-            return parseComplexMessage(topic, payload);
+            return parseComplexMessage(topic, payload.substring(0,payload.lastIndexOf("+")+1));
         }
     }
 
@@ -100,12 +101,12 @@ public class MqttConfiguration {
 
     private static List<ParsedReading> parseComplexMessage(final String topic, final String payload) {
         List<ParsedReading> readings = new ArrayList<>();
-        if (payload.contains(",") && payload.contains("+") && payload.split("\\+").length >= 3) {
+        if (payload.contains(",") && payload.contains("+") && (payload.split("\\+").length >= 3) || payload.split("\\+").length == 1) {
 
             final String mac = payload.split("/", 2)[0];
 
             final String sensorsPayload = payload.substring(payload.indexOf('/') + 1);
-            LOGGER.info("sensorsPayload:" + sensorsPayload);
+            LOGGER.info("sensorsPayload [" + topic + "]" + sensorsPayload);
             for (final String part : sensorsPayload.split("\\+")) {
                 if (part.isEmpty() || !part.contains(","))
                     continue;
