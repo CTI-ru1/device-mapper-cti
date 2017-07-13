@@ -84,7 +84,7 @@ public class MqttConfiguration {
     }
 
     private static List<ParsedReading> parseStringMessage(final String topic, final String payload) {
-        if (topic.startsWith("flare0")) {
+        if (topic.startsWith("flare")) {
             return parsePlainMessage(topic, payload);
         } else {
             return parseComplexMessage(topic, payload);
