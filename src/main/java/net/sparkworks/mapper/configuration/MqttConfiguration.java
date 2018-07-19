@@ -1,5 +1,6 @@
 package net.sparkworks.mapper.configuration;
 
+import net.sparkworks.mapper.adapter.CustomMqttChannelAdapter;
 import net.sparkworks.mapper.service.SenderService;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,7 +10,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.integration.annotation.ServiceActivator;
 import org.springframework.integration.channel.DirectChannel;
 import org.springframework.integration.core.MessageProducer;
-import org.springframework.integration.mqtt.inbound.MqttPahoMessageDrivenChannelAdapter;
+import org.springframework.integration.mqtt.core.DefaultMqttPahoClientFactory;
+import org.springframework.integration.mqtt.core.MqttPahoClientFactory;
 import org.springframework.integration.mqtt.support.DefaultPahoMessageConverter;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
@@ -32,6 +34,10 @@ public class MqttConfiguration {
     private String mqttTopics;
     @Value("${mqtt.clientId}")
     private String mqttClientId;
+    @Value("${mqtt.username}")
+    private String mqttUsername;
+    @Value("${mqtt.password}")
+    private String mqttPassword;
 
     @Autowired
     private SenderService senderService;
@@ -40,17 +46,27 @@ public class MqttConfiguration {
     public MessageChannel mqttInputChannel() {
         return new DirectChannel();
     }
-
+    
+    @Bean
+    public MqttPahoClientFactory mqttClientFactory() {
+        DefaultMqttPahoClientFactory factory = new DefaultMqttPahoClientFactory();
+        factory.setServerURIs(mqttUrl);
+                factory.setUserName(mqttUsername);
+        factory.setPassword(mqttPassword);
+        
+        return factory;
+    }
+    
     @Bean
     public MessageProducer inbound() {
-        MqttPahoMessageDrivenChannelAdapter adapter = new MqttPahoMessageDrivenChannelAdapter(mqttUrl, mqttClientId, mqttTopics);
+        final CustomMqttChannelAdapter adapter = new CustomMqttChannelAdapter(mqttClientId, mqttClientFactory(), mqttTopics);
+        adapter.setRecoveryInterval(5000);
         adapter.setCompletionTimeout(5000);
         adapter.setConverter(new DefaultPahoMessageConverter());
         adapter.setQos(0);
         adapter.setOutputChannel(mqttInputChannel());
         return adapter;
     }
-
 
     @Bean
     @ServiceActivator(inputChannel = "mqttInputChannel")
@@ -64,7 +80,6 @@ public class MqttConfiguration {
                 if (topic.startsWith("s") || topic.equals("heartbeat") || topic.equals("stats"))
                     return;
                 parseMessage(topic, message);
-
             }
         };
     }
