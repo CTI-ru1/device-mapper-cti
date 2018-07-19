@@ -51,8 +51,10 @@ public class MqttConfiguration {
     public MqttPahoClientFactory mqttClientFactory() {
         DefaultMqttPahoClientFactory factory = new DefaultMqttPahoClientFactory();
         factory.setServerURIs(mqttUrl);
-                factory.setUserName(mqttUsername);
-        factory.setPassword(mqttPassword);
+        if (mqttUsername != null && !mqttUsername.isEmpty()) {
+            factory.setUserName(mqttUsername);
+            factory.setPassword(mqttPassword);
+        }
         
         return factory;
     }
