@@ -1,0 +1,15 @@
+rabbitmq:
+  server: ${RABBIT_HOST}
+  port: ${RABBIT_PORT}
+  username: ${RABBIT_USER}
+  password: ${RABBIT_PASS}
+  queue:
+    send: ${RABBIT_SEND}
+    receive: ${RABBIT_RECEIVE}
+mqtt:
+  url: ${MQTT_URL}
+  topics: ${MQTT_TOPICS}
+  clientId: ${MQTT_CLIENT_ID}
+  username: ${MQTT_USERNAME}
+  password: ${MQTT_PASSWORD}
+

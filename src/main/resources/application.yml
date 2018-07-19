@@ -1,0 +1,14 @@
+rabbitmq:
+  server: 127.0.0.1
+  port: 5672
+  username: user
+  password: password
+  queue:
+    send: send
+    receive: receive
+mqtt:
+  url: "tcp://127.0.0.1:1883"
+  topics: "#"
+  clientId: "clientId"
+
+log.path: "/var/log/"
