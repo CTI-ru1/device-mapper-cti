@@ -116,7 +116,7 @@ public class MqttConfiguration {
         return readings;
     }
 
-    private static List<ParsedReading> parseComplexMessage(final String topic, final String payload) {
+    protected static List<ParsedReading> parseComplexMessage(final String topic, final String payload) {
         List<ParsedReading> readings = new ArrayList<>();
         if (payload.contains(",") && payload.contains("+") && (payload.split("\\+").length >= 3) || payload.split("\\+").length == 1) {
 
@@ -137,7 +137,7 @@ public class MqttConfiguration {
         return readings;
     }
 
-    private static class ParsedReading {
+    static class ParsedReading {
         private final String uri;
         private final Double value;
 
