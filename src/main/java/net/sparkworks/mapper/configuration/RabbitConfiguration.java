@@ -1,18 +1,15 @@
 package net.sparkworks.mapper.configuration;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+@Slf4j
 @Configuration
 public class RabbitConfiguration {
-    /**
-     * LOGGER.
-     */
-    private static final Logger LOGGER = Logger.getLogger(RabbitConfiguration.class);
 
     @Value("${rabbitmq.server}")
     String rabbitServer;
@@ -25,7 +22,7 @@ public class RabbitConfiguration {
 
     @Bean
     ConnectionFactory connectionFactory() {
-        LOGGER.info(rabbitServer + ":" + rabbitPort);
+        log.info(rabbitServer + ":" + rabbitPort);
         CachingConnectionFactory connectionFactory = new CachingConnectionFactory(rabbitServer);
         connectionFactory.setPort(Integer.parseInt(rabbitPort));
         connectionFactory.setUsername(rabbitUser);

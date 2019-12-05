@@ -1,8 +1,8 @@
 package net.sparkworks.mapper.configuration;
 
+import lombok.extern.slf4j.Slf4j;
 import net.sparkworks.mapper.adapter.CustomMqttChannelAdapter;
 import net.sparkworks.mapper.service.SenderService;
-import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -22,12 +22,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+@Slf4j
 @Configuration
 public class MqttConfiguration {
-    /**
-     * LOGGER.
-     */
-    private static final Logger LOGGER = Logger.getLogger(MqttConfiguration.class);
     private static final String VALUE_SEPARATOR = ",";
     private static final String READING_SEPARATOR = "+";
     private static final String READING_SEPARATOR_REGEX = "\\+";
@@ -94,20 +91,21 @@ public class MqttConfiguration {
     private void parseMessage(final String topic, final Message<?> message) {
         final String payload = (String) message.getPayload();
         try {
+            long now = System.currentTimeMillis();
             //cleanup non printable characters
             final List<ParsedReading> readings = parseStringMessage(topic, payload.replaceAll("[\\p{C}]", ""));
             for (final ParsedReading reading : readings) {
                 if (reading != null) {
-                    senderService.sendMeasurement(reading.getUri(), reading.getValue(), System.currentTimeMillis());
+                    senderService.sendMeasurement(reading.getUri(), reading.getValue(), now);
                 }
             }
         } catch (Exception e) {
-            LOGGER.error(e, e);
+            log.error(e.getMessage(), e);
         }
     }
 
     static List<ParsedReading> parseStringMessage(final String topic, final String payload) {
-        LOGGER.info("[" + topic + "] '" + payload + "'");
+        log.info("[" + topic + "] '" + payload + "'");
         if (topic.startsWith("flare")) {
             return parsePlainMessage(topic, payload);
         } else {
@@ -121,7 +119,7 @@ public class MqttConfiguration {
 
     private static List<ParsedReading> parsePlainMessage(final String uri, final String value) {
         final List<ParsedReading> readings = new ArrayList<>();
-        LOGGER.info(String.format("%s : %s", uri, value));
+        log.info(String.format("%s : %s", uri, value));
         readings.add(new ParsedReading(uri, new Double(value)));
         return readings;
     }
@@ -135,14 +133,14 @@ public class MqttConfiguration {
             final String mac = payload.split(MAC_SEPARATOR, 2)[0];
         
             final String sensorsPayload = payload.substring(payload.indexOf('/') + 1);
-            LOGGER.info("sensorsPayload [" + topic + "]" + sensorsPayload);
+            log.info("sensorsPayload [" + topic + "]" + sensorsPayload);
             for (final String part : sensorsPayload.split(READING_SEPARATOR_REGEX)) {
                 if (part.isEmpty() || !part.contains(","))
                     continue;
                 final String sensorName = part.split(VALUE_SEPARATOR)[0];
                 final String sensorValue = part.split(VALUE_SEPARATOR)[1];
                 final String uri = String.format("%s/%s/%s", topic, mac, sensorName);
-                LOGGER.info(String.format("%s : %s", uri, sensorValue));
+                log.info(String.format("%s : %s", uri, sensorValue));
                 readings.add(new ParsedReading(uri, new Double(sensorValue)));
             }
         }

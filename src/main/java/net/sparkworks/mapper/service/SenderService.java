@@ -1,6 +1,5 @@
 package net.sparkworks.mapper.service;
 
-import org.apache.log4j.Logger;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -11,10 +10,6 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class SenderService {
-    /**
-     * LOGGER.
-     */
-    private static final Logger LOGGER = Logger.getLogger(SenderService.class);
     private static final String MESSAGE_TEMPLATE = "%s,%f,%d";
 
     @Value("${rabbitmq.queue.send}")
