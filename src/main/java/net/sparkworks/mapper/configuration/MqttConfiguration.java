@@ -19,6 +19,7 @@ import org.springframework.messaging.MessageHandler;
 import org.springframework.messaging.MessagingException;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Configuration
@@ -27,7 +28,11 @@ public class MqttConfiguration {
      * LOGGER.
      */
     private static final Logger LOGGER = Logger.getLogger(MqttConfiguration.class);
-
+    private static final String VALUE_SEPARATOR = ",";
+    private static final String READING_SEPARATOR = "+";
+    private static final String READING_SEPARATOR_REGEX = "\\+";
+    private static final String MAC_SEPARATOR = "/";
+    
     @Value("${mqtt.url}")
     private String mqttUrl;
     @Value("${mqtt.topics}")
@@ -89,8 +94,9 @@ public class MqttConfiguration {
     private void parseMessage(final String topic, final Message<?> message) {
         final String payload = (String) message.getPayload();
         try {
-            List<ParsedReading> readings = parseStringMessage(topic, payload);
-            for (ParsedReading reading : readings) {
+            //cleanup non printable characters
+            final List<ParsedReading> readings = parseStringMessage(topic, payload.replaceAll("[\\p{C}]", ""));
+            for (final ParsedReading reading : readings) {
                 if (reading != null) {
                     senderService.sendMeasurement(reading.getUri(), reading.getValue(), System.currentTimeMillis());
                 }
@@ -100,12 +106,16 @@ public class MqttConfiguration {
         }
     }
 
-    private static List<ParsedReading> parseStringMessage(final String topic, final String payload) {
-        LOGGER.info("["+topic+"] '"+payload+"'");
+    static List<ParsedReading> parseStringMessage(final String topic, final String payload) {
+        LOGGER.info("[" + topic + "] '" + payload + "'");
         if (topic.startsWith("flare")) {
             return parsePlainMessage(topic, payload);
         } else {
-            return parseComplexMessage(topic, payload.substring(0,payload.lastIndexOf("+")+1));
+            if (payload.contains(READING_SEPARATOR)) {
+                return parseComplexMessage(topic, payload.substring(0, payload.lastIndexOf(READING_SEPARATOR) + 1));
+            } else {
+                return parseComplexMessage(topic, payload);
+            }
         }
     }
 
@@ -118,17 +128,19 @@ public class MqttConfiguration {
 
     protected static List<ParsedReading> parseComplexMessage(final String topic, final String payload) {
         List<ParsedReading> readings = new ArrayList<>();
-        if (payload.contains(",") && payload.contains("+") && (payload.split("\\+").length >= 3) || payload.split("\\+").length == 1) {
-
-            final String mac = payload.split("/", 2)[0];
-
+        if (!payload.contains(VALUE_SEPARATOR)) {
+            return Collections.emptyList();
+        }
+        if (!payload.contains(READING_SEPARATOR) || (payload.split(READING_SEPARATOR_REGEX).length >= 3 || payload.split(READING_SEPARATOR_REGEX).length == 1)) {
+            final String mac = payload.split(MAC_SEPARATOR, 2)[0];
+        
             final String sensorsPayload = payload.substring(payload.indexOf('/') + 1);
             LOGGER.info("sensorsPayload [" + topic + "]" + sensorsPayload);
-            for (final String part : sensorsPayload.split("\\+")) {
+            for (final String part : sensorsPayload.split(READING_SEPARATOR_REGEX)) {
                 if (part.isEmpty() || !part.contains(","))
                     continue;
-                final String sensorName = part.split(",")[0];
-                final String sensorValue = part.split(",")[1];
+                final String sensorName = part.split(VALUE_SEPARATOR)[0];
+                final String sensorValue = part.split(VALUE_SEPARATOR)[1];
                 final String uri = String.format("%s/%s/%s", topic, mac, sensorName);
                 LOGGER.info(String.format("%s : %s", uri, sensorValue));
                 readings.add(new ParsedReading(uri, new Double(sensorValue)));
